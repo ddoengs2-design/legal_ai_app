@@ -100,7 +100,7 @@ with st.sidebar:
             genai.configure(api_key=api_key)
 
     # [핵심 수정] NameError 방지를 위한 모델 변수 정의
-    selected_model = "gemini-1.5-flash" 
+    selected_model = "models/gemini-2.0-flash-exp"
     
     st.divider()
     st.markdown(f"### 📚 시스템 정보\n- 모델: {selected_model}\n- v4.2 Professional\n- 법규 위계 분석 강화")
