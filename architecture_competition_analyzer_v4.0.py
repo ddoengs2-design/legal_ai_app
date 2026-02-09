@@ -22,8 +22,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-# .env 파일 로드
-load_dotenv()
+# .env 파일 로드 (강제 덮어쓰기 모드로 설정하여 변경사항 즉시 반영)
+load_dotenv(override=True)
 
 # ================================
 # 페이지 설정 및 CSS
@@ -70,23 +70,23 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================================
-# 사이드바 설정
+# 사이드바 설정 (API 키 교체 시스템)
 # ================================
 with st.sidebar:
     st.header("⚙️ 분석 설정")
     
-    # [핵심] .env 파일 왼쪽에 적힌 '변수명'만 정확히 입력합니다.
+    # .env 파일에서 키들을 가져옵니다.
     key_options = {
         "메인 키 (계정1)": os.getenv("GOOGLE_API_KEY_1"),
         "예비 키 1 (계정2)": os.getenv("GOOGLE_API_KEY_2"),
         "예비 키 2 (계정3)": os.getenv("GOOGLE_API_KEY_3")
     }
     
-    # 실제로 값이 존재하여 불러오기에 성공한 키들만 리스트에 담습니다.
+    # 실제로 값이 존재하는 키들만 필터링
     valid_keys = {name: key for name, key in key_options.items() if key}
     
     if valid_keys:
-        # 이제 "직접 입력" 대신 이 선택 박스가 화면에 나타납니다.
+        # 키 선택 박스
         selected_name = st.selectbox("🔑 사용할 API 키 선택", list(valid_keys.keys()))
         api_key = valid_keys[selected_name]
         
@@ -94,11 +94,17 @@ with st.sidebar:
             genai.configure(api_key=api_key)
             st.success(f"{selected_name} 연결 완료")
     else:
-        # 여전히 직접 입력이 뜬다면 .env 파일의 위치나 파일명을 다시 확인해야 합니다.
         st.warning("⚠️ .env 파일에서 키를 찾을 수 없습니다.")
         api_key = st.text_input("Gemini API Key 직접 입력", type="password")
         if api_key:
             genai.configure(api_key=api_key)
+
+    # [핵심 수정] NameError 방지를 위한 모델 변수 정의
+    selected_model = "gemini-1.5-flash" 
+    
+    st.divider()
+    st.markdown(f"### 📚 시스템 정보\n- 모델: {selected_model}\n- v4.2 Professional\n- 법규 위계 분석 강화")
+
 # ================================
 # 메인 UI: 입력 섹션
 # ================================
@@ -136,6 +142,7 @@ def upload_to_gemini(file):
     return gemini_file
 
 def perform_analysis(comp_pdf, reg_pdfs, address, zones):
+    # 상단에서 정의된 selected_model 사용
     model = genai.GenerativeModel(selected_model)
     
     prompt = f"""
@@ -177,51 +184,52 @@ if st.button("🚀 AI 통합 분석 시작", type="primary", use_container_width
         st.error("모든 필드와 파일을 입력해주세요.")
     else:
         with st.spinner("전문 AI가 법규 위계를 교차 분석 중입니다..."):
-            # 파일 업로드
-            comp_gemini = upload_to_gemini(competition_file)
-            reg_geminis = [upload_to_gemini(f) for f in regulation_files]
-            
-            # 분석 실행
-            full_text = perform_analysis(comp_gemini, reg_geminis, target_address, target_zones)
-            
-            # 1. JSON 데이터 파싱 및 그래프 시각화
             try:
-                json_match = re.search(r'\{.*\}', full_text, re.DOTALL)
-                if json_match:
-                    data = json.loads(json_match.group())
-                    st.markdown('<div class="section-header">📊 실별 면적 분석 그래프</div>', unsafe_allow_html=True)
-                    
-                    # 면적 데이터 추출 (예시 구조 대응)
-                    area_data = data.get("실별면적표", data.get("공간계획", []))
-                    if area_data:
-                        df = pd.DataFrame(area_data)
-                        # 컬럼명 유연화 및 숫자 변환
-                        df.columns = ['실명', '면적'] if len(df.columns) >= 2 else df.columns
-                        df['면적_val'] = df['면적'].replace(r'[^0-9.]', '', regex=True).astype(float)
+                # 파일 업로드
+                comp_gemini = upload_to_gemini(competition_file)
+                reg_geminis = [upload_to_gemini(f) for f in regulation_files]
+                
+                # 분석 실행
+                full_text = perform_analysis(comp_gemini, reg_geminis, target_address, target_zones)
+                
+                # 1. JSON 데이터 파싱 및 그래프 시각화
+                try:
+                    json_match = re.search(r'\{.*\}', full_text, re.DOTALL)
+                    if json_match:
+                        data = json.loads(json_match.group())
+                        st.markdown('<div class="section-header">📊 실별 면적 분석 그래프</div>', unsafe_allow_html=True)
                         
-                        viz_col1, viz_col2 = st.columns(2)
-                        with viz_col1:
-                            fig_pie = px.pie(df, values='면적_val', names='실명', title='실별 면적 비중', hole=0.4)
-                            st.plotly_chart(fig_pie)
-                        with viz_col2:
-                            fig_bar = px.bar(df, x='실명', y='면적_val', color='실명', title='실별 상세 면적(㎡)')
-                            st.plotly_chart(fig_bar)
-            except:
-                st.info("데이터 구조화 진행 중... 그래프 생성 대기")
+                        area_data = data.get("실별면적표", data.get("공간계획", []))
+                        if area_data:
+                            df = pd.DataFrame(area_data)
+                            df.columns = ['실명', '면적'] if len(df.columns) >= 2 else df.columns
+                            df['면적_val'] = df['면적'].replace(r'[^0-9.]', '', regex=True).astype(float)
+                            
+                            viz_col1, viz_col2 = st.columns(2)
+                            with viz_col1:
+                                fig_pie = px.pie(df, values='면적_val', names='실명', title='실별 면적 비중', hole=0.4)
+                                st.plotly_chart(fig_pie)
+                            with viz_col2:
+                                fig_bar = px.bar(df, x='실명', y='면적_val', color='실명', title='실별 상세 면적(㎡)')
+                                st.plotly_chart(fig_bar)
+                except Exception as e:
+                    st.info("데이터 시각화 중 일부 오류가 있었으나 분석은 계속됩니다.")
 
-            # 2. 법규 위계 분석 출력
-            st.markdown('<div class="section-header">⚖️ 법규 위계 및 교차 분석 결과</div>', unsafe_allow_html=True)
-            
-            # 섹션별 분리 및 스타일 적용
-            sections = full_text.split("####")
-            for section in sections:
-                if "1. 상위법" in section:
-                    st.info(f"**🏛️ 국계법 및 상위 법령 분석**\n\n{section.replace('1. 상위법', '')}")
-                elif "2. 하위법" in section:
-                    st.success(f"**📜 지자체 조례 및 하위 법령 분석 (실무 적용)**\n\n{section.replace('2. 하위법', '')}")
-                elif "3. 실질 적용" in section:
-                    st.markdown("### 📌 최종 설계 적용 가이드")
-                    st.markdown(f'<div class="highlight-box">{section.replace("3. 실질 적용", "")}</div>', unsafe_allow_html=True)
+                # 2. 법규 위계 분석 출력
+                st.markdown('<div class="section-header">⚖️ 법규 위계 및 교차 분석 결과</div>', unsafe_allow_html=True)
+                
+                sections = full_text.split("####")
+                for section in sections:
+                    if "1. 상위법" in section:
+                        st.info(f"**🏛️ 국계법 및 상위 법령 분석**\n\n{section.replace('1. 상위법', '')}")
+                    elif "2. 하위법" in section:
+                        st.success(f"**📜 지자체 조례 및 하위 법령 분석 (실무 적용)**\n\n{section.replace('2. 하위법', '')}")
+                    elif "3. 실질 적용" in section:
+                        st.markdown("### 📌 최종 설계 적용 가이드")
+                        st.markdown(f'<div class="highlight-box">{section.replace("3. 실질 적용", "")}</div>', unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"분석 중 오류가 발생했습니다: {e}")
+                st.info("💡 API 할당량 초과 시 왼쪽 사이드바에서 다른 키를 선택해 보세요.")
 
 st.divider()
-st.caption("Powered by Google Gemini 2.0 Flash | v4.2 Professional Edition | © 2026 Kim Doyoung")
+st.caption("Powered by Google Gemini 1.5 Flash | v4.2 Professional Edition | © 2026 Kim Doyoung")
