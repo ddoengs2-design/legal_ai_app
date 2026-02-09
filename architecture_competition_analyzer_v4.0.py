@@ -74,18 +74,30 @@ st.markdown("""
 # ================================
 with st.sidebar:
     st.header("⚙️ 분석 설정")
-    api_key = os.getenv("GOOGLE_API_KEY", "")
-    if not api_key:
-        api_key = st.text_input("Gemini API Key", type="password")
     
-    if api_key:
-        genai.configure(api_key=api_key)
-        st.success("API 연결 완료")
+    # .env 파일에 정의한 이름을 그대로 가져옵니다.
+    key_options = {
+        "메인 키 (계정1)": os.getenv("GOOGLE_API_KEY_1=AIzaSyBKvTWRmqnSNC1k8mRnzE2tz0f6-vwkAkl"),
+        "예비 키 1 (계정2)": os.getenv("GOOGLE_API_KEY_2=AIzaSyAuOZYOHowu6e27C-j3J6RyP9CHhxRoWoM"),
+        "예비 키 2 (계정3)": os.getenv("GOOGLE_API_KEY_3=AIzaSyDj219g9igFk2O0GT7l9seQL5VYTWEwoM8")
+    }
     
-    selected_model = "gemini-2.0-flash" # 최신 모델 권장
-    st.divider()
-    st.markdown("### 📚 시스템 정보\n- v4.2 Professional\n- 법규 위계 분석 강화\n- 실시간 그래프 시각화")
-
+    # 실제로 값이 들어있는 키만 골라냅니다.
+    valid_keys = {name: key for name, key in key_options.items() if key}
+    
+    if valid_keys:
+        selected_name = st.selectbox("🔑 사용할 API 키 선택", list(valid_keys.keys()))
+        api_key = valid_keys[selected_name]
+        
+        if api_key:
+            genai.configure(api_key=api_key)
+            st.success(f"{selected_name} 연결 완료")
+    else:
+        # .env에 키가 하나도 없을 때를 대비한 직접 입력창
+        api_key = st.text_input("Gemini API Key 직접 입력", type="password")
+        if api_key:
+            genai.configure(api_key=api_key)
+            
 # ================================
 # 메인 UI: 입력 섹션
 # ================================
