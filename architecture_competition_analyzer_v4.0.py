@@ -77,9 +77,9 @@ with st.sidebar:
     
     # .env 파일에 정의한 이름을 그대로 가져옵니다.
     key_options = {
-        "메인 키 (계정1)": os.getenv("GOOGLE_API_KEY_1=AIzaSyBKvTWRmqnSNC1k8mRnzE2tz0f6-vwkAkl"),
-        "예비 키 1 (계정2)": os.getenv("GOOGLE_API_KEY_2=AIzaSyAuOZYOHowu6e27C-j3J6RyP9CHhxRoWoM"),
-        "예비 키 2 (계정3)": os.getenv("GOOGLE_API_KEY_3=AIzaSyDj219g9igFk2O0GT7l9seQL5VYTWEwoM8")
+        "메인 키 (계정1)": os.getenv("GOOGLE_API_KEY_1"),
+        "예비 키 1 (계정2)": os.getenv("GOOGLE_API_KEY_2"),
+        "예비 키 2 (계정3)": os.getenv("GOOGLE_API_KEY_3")
     }
     
     # 실제로 값이 들어있는 키만 골라냅니다.
