@@ -11,8 +11,8 @@ api_key = st.secrets["GOOGLE_API_KEY"] if "GOOGLE_API_KEY" in st.secrets else os
 genai.configure(api_key=api_key)
 
 # 2. 페이지 설정
-st.set_page_config(page_title="건축 공모 & 법규 분석 시스템 v4.1.4", layout="wide")
-VERSION = "v4.1.4 Professional Edition"
+st.set_page_config(page_title="건축 공모 & 법규 분석 시스템 v4.1.5", layout="wide")
+VERSION = "v4.1.5 Professional Edition"
 COPYRIGHT_TEXT = "All intellectual property rights belong to Kim Doyoung."
 
 # 3. 헤더 및 저작권
@@ -29,7 +29,7 @@ with col_info2:
 
 st.divider()
 
-# 5. 업로드 섹션 분리
+# 5. 업로드 섹션 분리 (에러가 발생했던 지점 괄호 점검 완료)
 col_main, col_sub = st.columns(2)
 
 with col_main:
@@ -42,7 +42,3 @@ with col_main:
 
 with col_sub:
     st.subheader("📚 관련 법규 및 참고자료 (다중)")
-    reference_laws = st.file_uploader(
-        "참고할 법규나 조례 PDF들을 모두 선택하세요", 
-        type=['pdf'], 
-        accept_multiple_files=True,
