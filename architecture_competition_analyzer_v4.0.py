@@ -103,7 +103,7 @@ with st.sidebar:
     key1 = st.text_input("🔑 메인 API 키", value=os.getenv("GOOGLE_API_KEY_1", ""), type="password")
     key2 = st.text_input("🔑 예비 API 키 1", value=os.getenv("GOOGLE_API_KEY_2", ""), type="password")
     key3 = st.text_input("🔑 예비 API 키 2", value=os.getenv("GOOGLE_API_KEY_3", ""), type="password")
-    
+    key4 = st.text_input("🔑 예비 API 키 3", value=os.getenv("GOOGLE_API_KEY_4", ""), type="password")    
     # 사용 가능한 키 리스트 생성
     available_keys = [k for k in [key1, key2, key3] if k.strip()]
     
