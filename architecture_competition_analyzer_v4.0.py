@@ -75,17 +75,18 @@ st.markdown("""
 with st.sidebar:
     st.header("⚙️ 분석 설정")
     
-    # .env 파일에 정의한 이름을 그대로 가져옵니다.
+    # [핵심] .env 파일 왼쪽에 적힌 '변수명'만 정확히 입력합니다.
     key_options = {
         "메인 키 (계정1)": os.getenv("GOOGLE_API_KEY_1"),
         "예비 키 1 (계정2)": os.getenv("GOOGLE_API_KEY_2"),
         "예비 키 2 (계정3)": os.getenv("GOOGLE_API_KEY_3")
     }
     
-    # 실제로 값이 들어있는 키만 골라냅니다.
+    # 실제로 값이 존재하여 불러오기에 성공한 키들만 리스트에 담습니다.
     valid_keys = {name: key for name, key in key_options.items() if key}
     
     if valid_keys:
+        # 이제 "직접 입력" 대신 이 선택 박스가 화면에 나타납니다.
         selected_name = st.selectbox("🔑 사용할 API 키 선택", list(valid_keys.keys()))
         api_key = valid_keys[selected_name]
         
@@ -93,11 +94,11 @@ with st.sidebar:
             genai.configure(api_key=api_key)
             st.success(f"{selected_name} 연결 완료")
     else:
-        # .env에 키가 하나도 없을 때를 대비한 직접 입력창
+        # 여전히 직접 입력이 뜬다면 .env 파일의 위치나 파일명을 다시 확인해야 합니다.
+        st.warning("⚠️ .env 파일에서 키를 찾을 수 없습니다.")
         api_key = st.text_input("Gemini API Key 직접 입력", type="password")
         if api_key:
             genai.configure(api_key=api_key)
-            
 # ================================
 # 메인 UI: 입력 섹션
 # ================================
