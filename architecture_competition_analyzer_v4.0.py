@@ -22,41 +22,79 @@ from docx.oxml.ns import qn
 load_dotenv(override=True)
 
 # ================================
-# 페이지 설정 및 스타일
+# 페이지 설정 및 스타일 (Orange Theme)
 # ================================
 st.set_page_config(page_title="건축 공모 & 법규 분석 시스템 v4.2", page_icon="🏛️", layout="wide")
 
 st.markdown("""
 <style>
-    .main-title { text-align: center; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 1.5rem; border-radius: 15px; font-size: 2rem; font-weight: bold; margin-bottom: 2rem; }
-    .section-header { background: #f8fafc; padding: 0.8rem; border-left: 5px solid #3b82f6; border-radius: 5px; margin: 1.5rem 0 1rem 0; font-weight: bold; }
-    .highlight-box { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 1.2rem; border-radius: 8px; color: #856404; line-height: 1.7; }
+    /* 메인 타이틀: 오렌지 그라데이션 */
+    .main-title { 
+        text-align: center; 
+        background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); 
+        color: white; 
+        padding: 1.5rem; 
+        border-radius: 15px; 
+        font-size: 2rem; 
+        font-weight: bold; 
+        margin-bottom: 2rem; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    /* 섹션 헤더: 오렌지 포인트 */
+    .section-header { 
+        background: #fff7ed; 
+        padding: 0.8rem; 
+        border-left: 5px solid #f97316; 
+        border-radius: 5px; 
+        margin: 1.5rem 0 1rem 0; 
+        font-weight: bold; 
+        color: #9a3412;
+    }
+    .category-label { 
+        font-size: 0.85rem; 
+        font-weight: bold; 
+        color: #c2410c; 
+        margin-bottom: 5px; 
+        display: block; 
+    }
+    /* 저작권 표기 스타일 */
+    .copyright {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        margin-top: 50px;
+        padding: 25px;
+        border-top: 1px solid #e2e8f0;
+        line-height: 1.6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ================================
-# 사이드바 설정
+# 지역지구 카테고리 데이터
 # ================================
-with st.sidebar:
-    st.header("⚙️ 분석 설정")
-    selected_model = "models/gemini-2.5-flash"
-    
-    key_options = {
-        "메인 키 (계정1)": os.getenv("GOOGLE_API_KEY_1"),
-        "예비 키 1 (계정2)": os.getenv("GOOGLE_API_KEY_2"),
-        "예비 키 2 (계정3)": os.getenv("GOOGLE_API_KEY_3")
-    }
-    valid_keys = {name: key for name, key in key_options.items() if key}
-    
-    if valid_keys:
-        selected_name = st.selectbox("🔑 사용할 API 키 선택", list(valid_keys.keys()))
-        genai.configure(api_key=valid_keys[selected_name])
-        st.success(f"{selected_name} 연결 완료")
-    else:
-        st.error("⚠️ API 키를 찾을 수 없습니다. .env 파일을 확인해주세요.")
-
-    st.divider()
-    st.caption(f"Model: {selected_model}\nVersion: 4.2 Pro")
+ZONES_DATA = {
+    "🏢 용도지역 (도시)": [
+        "제1종전용주거지역", "제2종전용주거지역", "제1종일반주거지역", "제2종일반주거지역", 
+        "제3종일반주거지역", "준주거지역", "중심상업지역", "일반상업지역", "근린상업지역", 
+        "유통상업지역", "전용공업지역", "일반공업지역", "준공업지역", "보전녹지지역", 
+        "생산녹지지역", "자연녹지지역"
+    ],
+    "🌲 용도지역 (비도시)": [
+        "보전관리지역", "생산관리지역", "계획관리지역", "농림지역", "자연환경보전지역"
+    ],
+    "⚠️ 용도지구": [
+        "경관지구", "고도지구", "방화지구", "방재지구", "보호지구", "취락지구", 
+        "개발진흥지구", "특정용도제한지구", "복합용도지구"
+    ],
+    "🛑 용도구역": [
+        "개발제한구역", "도시자연공원구역", "시가화조정구역", "수산자원보호구역", "입지규제최소구역"
+    ],
+    "🎖️ 군사/기타": [
+        "군사기지 및 군사시설 보호구역", "제한보호구역", "통제보호구역", "비행안전구역",
+        "역사문화환경보존지역", "가축사육제한구역", "지구단위계획구역", "상수원보호구역"
+    ]
+}
 
 # ================================
 # 유틸리티 함수
@@ -80,13 +118,15 @@ def create_docx(address, zones, analysis_text):
     title = doc.add_heading('법 규 검 토 서', 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    doc.add_paragraph(f"일시: {datetime.now().strftime('%Y-%m-%d')}")
-    doc.add_paragraph(f"대상지: {address}")
-    doc.add_paragraph(f"용도지역: {', '.join(zones)}")
+    doc.add_paragraph(f"분석일시: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    doc.add_paragraph(f"대상지 주소: {address}")
+    doc.add_paragraph(f"지역지구 지정현황: {', '.join(zones)}")
     
-    doc.add_heading('1. 분석 결과 요약', level=1)
+    doc.add_heading('1. 통합 법규 분석 및 설계 가이드', level=1)
     clean_text = re.sub(r'[#*`-]', '', analysis_text)
     doc.add_paragraph(clean_text)
+    
+    doc.add_paragraph("\nAll intellectual property rights belong to Kim Doyoung.")
 
     buffer = BytesIO()
     doc.save(buffer)
@@ -94,98 +134,50 @@ def create_docx(address, zones, analysis_text):
     return buffer
 
 # ================================
-# 메인 로직
+# 사이드바 설정
+# ================================
+with st.sidebar:
+    st.header("⚙️ 분석 설정")
+    selected_model = "models/gemini-2.5-flash"
+    
+    key_options = {
+        "메인 키 (계정1)": os.getenv("GOOGLE_API_KEY_1"),
+        "예비 키 1 (계정2)": os.getenv("GOOGLE_API_KEY_2")
+    }
+    valid_keys = {name: key for name, key in key_options.items() if key}
+    
+    if valid_keys:
+        selected_name = st.selectbox("🔑 API 키 선택", list(valid_keys.keys()))
+        genai.configure(api_key=valid_keys[selected_name])
+        st.success("연결 완료")
+    else:
+        st.error("API 키가 없습니다.")
+
+# ================================
+# 메인 화면 UI
 # ================================
 st.markdown('<div class="main-title">🏛️ 건축 공모 & 법규 분석 시스템 v4.2</div>', unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
-with col1:
-    target_address = st.text_input("📌 대상지 주소", placeholder="예: 경기도 여주시 가업동 9-1")
-with col2:
-    target_zones = st.multiselect("🏢 용도지역/지구 선택", ["자연녹지지역", "제1종일반주거", "제2종일반주거", "일반상업지역", "군사시설보호구역", "역사문화환경보존지역"])
+# 1. 대상지 정보 및 카테고리별 선택
+st.markdown('<div class="section-header">📍 1. 대상지 정보 및 지역지구 상세 선택</div>', unsafe_allow_html=True)
+target_address = st.text_input("📌 대상지 주소", placeholder="여주시 가업동 9-1 등 주소를 입력하세요.")
 
+selected_all_zones = []
+zone_cols = st.columns(len(ZONES_DATA))
+for i, (category, options) in enumerate(ZONES_DATA.items()):
+    with zone_cols[i]:
+        st.markdown(f'<span class="category-label">{category}</span>', unsafe_allow_html=True)
+        selected = st.multiselect(category, options, label_visibility="collapsed")
+        selected_all_zones.extend(selected)
+
+# 2. 파일 업로드
+st.markdown('<div class="section-header">📄 2. 분석 자료 업로드</div>', unsafe_allow_html=True)
 up1, up2 = st.columns(2)
 with up1:
-    comp_file = st.file_uploader("📄 메인 공모지침서 (PDF)", type=['pdf'])
+    comp_file = st.file_uploader("📂 공모 지침서 (PDF)", type=['pdf'])
 with up2:
     reg_files = st.file_uploader("⚖️ 관련 법규/조례 (PDF)", type=['pdf'], accept_multiple_files=True)
 
-if st.button("🚀 AI 통합 분석 및 보고서 생성", type="primary", use_container_width=True):
-    if not (comp_file and target_address):
-        st.error("필수 정보를 입력해주세요.")
-    else:
-        with st.spinner("AI가 법규 위계와 면적을 교차 분석 중입니다..."):
-            try:
-                # 파일 업로드
-                comp_gemini = upload_to_gemini(comp_file)
-                reg_geminis = [upload_to_gemini(f) for f in reg_files]
-                
-                model = genai.GenerativeModel(selected_model)
-                
-                # 프롬프트 내 중괄호를 {{ }}로 처리하여 오류 방지
-                prompt = f"""
-                건축 전문가로서 다음을 분석하라:
-                1. [면적데이터]: 전용면적과 공용면적의 수치를 포함한 JSON 형식으로 추출하라.
-                   형식 예시: {{"net_area": 수치, "gross_area": 수치, "rooms": [{{"name": "실명", "area": 수치}}]}}
-                2. [법규위계]: 상위법(국계법, 주차장법)과 하위법(여주시 조례)을 비교 분석하라.
-                3. [가이드]: 설계 시 반드시 준수해야 할 핵심 지침들을 발췌하라.
-                
-                주소: {target_address}
-                지역지구: {', '.join(target_zones)}
-                """
-                
-                response = model.generate_content([comp_gemini] + reg_geminis + [prompt])
-                full_text = response.text
-
-                # 1. 시각화 섹션
-                st.markdown('<div class="section-header">📊 실별 면적 및 전용/공용 비율 분석</div>', unsafe_allow_html=True)
-                json_match = re.search(r'\{.*\}', full_text, re.DOTALL)
-                
-                if json_match:
-                    try:
-                        data = json.loads(json_match.group())
-                        v_col1, v_col2 = st.columns(2)
-                        with v_col1:
-                            ratio_df = pd.DataFrame({"구분": ["전용면적", "공용면적"], "면적": [data.get('net_area', 0), data.get('gross_area', 0)]})
-                            fig1 = px.pie(ratio_df, values='면적', names='구분', hole=0.5, title="전용 vs 공용 비율 (도넛)", color_discrete_sequence=['#1e3a8a', '#3b82f6'])
-                            st.plotly_chart(fig1)
-                        with v_col2:
-                            room_df = pd.DataFrame(data.get('rooms', []))
-                            if not room_df.empty:
-                                fig2 = px.bar(room_df, x='name', y='area', title="실별 상세 면적 (㎡)", color='area', color_continuous_scale='Blues')
-                                st.plotly_chart(fig2)
-                    except:
-                        st.warning("데이터 시각화 중 형식 오류가 발생했습니다. 텍스트 분석을 확인하세요.")
-
-                # 2. 아코디언 가이드
-                st.markdown('<div class="section-header">💡 최종 설계 적용 가이드 (상세 발췌)</div>', unsafe_allow_html=True)
-                sections = full_text.split("###")
-                for sec in sections:
-                    if "법규" in sec or "가이드" in sec or "적용" in sec:
-                        with st.expander(f"🔍 {sec.splitlines()[0]} 관련 상세 내용 보기"):
-                            st.write(sec)
-
-                # 3. 종합 요약 표
-                st.markdown('<div class="section-header">📋 핵심 법규 및 지침 요약표</div>', unsafe_allow_html=True)
-                # AI 응답에서 핵심 키워드 추출 시뮬레이션
-                summary_data = {
-                    "구분": ["대상지", "용도지역", "주차기준", "특이사항"],
-                    "주요 내용": [target_address, ", ".join(target_zones), "조례 및 주차장법 준수", "역사문화환경 및 군사협의 확인"]
-                }
-                st.table(pd.DataFrame(summary_data))
-
-                # 4. 다운로드 버튼
-                docx_file = create_docx(target_address, target_zones, full_text)
-                st.download_button(
-                    label="📥 법규검토서(HWP호환) 다운로드",
-                    data=docx_file,
-                    file_name=f"법규검토서_{datetime.now().strftime('%m%d')}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
-                )
-
-            except Exception as e:
-                st.error(f"분석 중 오류 발생: {e}")
-
-st.divider()
-st.caption("Powered by Google Gemini 2.5 Flash | v4.2 Professional Edition")
+# 3. 분석 실행
+if st.button("🚀 AI 통합 법규 분석 및 리포트 생성", type="primary", use_container_width=True):
+    if not (comp_file and target_address and selected_all_zones):
