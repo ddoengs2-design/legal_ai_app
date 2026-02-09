@@ -29,17 +29,33 @@ with col_info2:
 
 st.divider()
 
-# 5. 업로드 섹션 분리 (핵심 업데이트)
+# 5. 업로드 섹션 분리 (에러가 발생했던 지점 수정 완료)
 col_main, col_sub = st.columns(2)
 
 with col_main:
     st.subheader("📑 메인 공모지침서 (단일)")
-    # 단일 파일 업로드 (accept_multiple_files=False가 기본값)
     main_guideline = st.file_uploader(
         "분석의 기준이 되는 지침서 1개를 업로드하세요", 
         type=['pdf'], 
-        key="main_pdf"
+        key="main_pdf",
+        accept_multiple_files=False
     )
 
 with col_sub:
-    st.subheader("
+    st.subheader("📚 관련 법규 및 참고자료 (다중)")
+    reference_laws = st.file_uploader(
+        "참고할 법규나 조례 PDF들을 모두 선택하세요", 
+        type=['pdf'], 
+        accept_multiple_files=True,
+        key="sub_pdfs"
+    )
+
+# 6. 분석 옵션
+st.subheader("⚙️ 분석 집중 항목")
+analysis_focus = st.multiselect(
+    "AI가 중점적으로 검토할 항목을 선택하세요",
+    ["건축규모/면적", "용도/프로그램", "법적 제한사항", "설계 공모 일정", "제출물 목록"],
+    default=["건축규모/면적", "법적 제한사항"]
+)
+
+# 7
